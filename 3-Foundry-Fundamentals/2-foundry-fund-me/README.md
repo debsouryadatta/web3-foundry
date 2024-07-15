@@ -83,9 +83,9 @@ $ cast --help
    
 9.  Deployment done by - us -> FundMeTest -> FundMe, so we should compare fundMe.i_owner() with FundMeTest address rather than msg.sender
 
-10. Adding function testPriceFeedVersionIsAccurate() in the FundMeTest.t.sol file, to test the version of the price feed(Not working on my code currently) -> Gave error, `forge test -vvv` -> to get more details about the error. `forge test -m testPriceFeedVersionIsAccurate -vvv` -> to run only this test.
+10. Adding function testPriceFeedVersionIsAccurate() in the FundMeTest.t.sol file, to test the version of the price feed-> Gave error, `forge test -vvv` -> to get more details about the error. `forge test --match-test testPriceFeedVersionIsAccurate -vvv` -> to run only this test.
     
-11. We got to know that the error is in the testPriceFeedVersionIsAccurate func, the error is actually because when we run `forge test -m testPriceFeedVersionIsAccurate -vvv` -> It runs up a new anvil instance and when the test got ran completely, the anvil instance got destroyed and the price feed version is not available anymore.
+11. We got to know that the error is in the testPriceFeedVersionIsAccurate func, the error is actually because when we run `forge test --match-test testPriceFeedVersionIsAccurate -vvv` -> It runs up a new anvil instance and when the test got ran completely, the anvil instance got destroyed and the price feed version is not available anymore.
     
 12. 4 types of testing:
     - Unit: Testing a single function
@@ -93,6 +93,24 @@ $ cast --help
     - Forked: Testing on a forked network
     - Staging: Testing on a live network (testnet or mainnet)
 
-13. Addressing the previous error, we should use `forge test -m testPriceFeedVersionIsAccurate -vvv --fork-url $SEPOLIA_RPC_URL` -> to run the test on a forked network. -> It will run the test on the forked network and the price feed version will be available even after the test is completed hence the error will not occur.
+13. Addressing the previous error, we should use `forge test --match-test testPriceFeedVersionIsAccurate -vvv --fork-url $SEPOLIA_RPC_URL` -> to run the test on a forked network. -> It will run the test on the forked network and the price feed version will be available even after the test is completed hence the error will not occur.
     
 14. Downside -> It will create a lot of bill for many tests, so we should not use fork-urls wherever it is not necessary.
+
+15. `forge coverage --rpc-url/--fork-url $SEPOLIA_RPC_URL` -> to get the coverage of the tests(No. of lines of code tested).
+    
+16. Making the priceFeed address modular, sending the Sepolia address for AggregatorV3Interface in the constructor and storing it in another variable.
+
+17. Refactoring the DeployFundMe Contract so that it can be called in the test scripts, changing the testOwnerIsSender func -> msg.sender in place of address(this)
+
+18. Creating a HelperConfig.s.sol file to store the network infos so that we don't have to repeat during development.
+
+19. Refactoring the DeployFundMe.s.sol so that it uses the HelperConfig.s.sol file to get the network infos.
+
+20. Adding getMainnetEthConfig in the HelperConfig.s.sol file, testing it out with the mainnet rpc url `forge test --fork-url $MAINNET_RPC_URL`
+
+21. Mocking the anvil price feed, creating a new file -> MockV3Aggregator.sol, copying it from the github repo, deploying it in the anvilConfig function and using it there.
+
+22. Using constant variables instead of keeping the values hardcoded in the function args.
+
+23. And now that we have the mock anvil price feed, we can test the price feed version without using the forked network. `forge test`
