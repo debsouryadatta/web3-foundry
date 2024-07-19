@@ -13,10 +13,10 @@ error FundMe__NotOwner();
 contract FundMe {
     using PriceConverter for uint256;
 
-    mapping(address funder => uint256 amountFunded) public addressToAmountFunded;
-    address[] public funders;
+    mapping(address funder => uint256 amountFunded) private s_addressToAmountFunded;
+    address[] private s_funders;
 
-    address public immutable i_owner;
+    address private immutable i_owner;
     uint256 public constant MINIMUM_USD = 5e18;
     AggregatorV3Interface private s_priceFeed;
 
@@ -33,8 +33,8 @@ contract FundMe {
         // Have a minimum money to be sent
         // 1. How do we send ETH to this contract?
         require(msg.value.getConversionRate(s_priceFeed) > MINIMUM_USD, "Didn't send enough ETH"); // 1 ETH = 10^18 wei
-        funders.push(msg.sender);
-        addressToAmountFunded[msg.sender] = addressToAmountFunded[msg.sender] + msg.value;
+        s_funders.push(msg.sender);
+        s_addressToAmountFunded[msg.sender] = s_addressToAmountFunded[msg.sender] + msg.value;
     }
 
     function getVersion() public view returns(uint256){
@@ -42,15 +42,27 @@ contract FundMe {
     }
 
 
+    function cheaperWithdraw() public onlyOwner {
+        uint256 fundersLength = s_funders.length; // creating memory variable for gas optimisation
+        for(uint256 funderIndex = 0; funderIndex < fundersLength; funderIndex++){
+            address funder = s_funders[funderIndex];
+            s_addressToAmountFunded[funder] = 0;
+        }
+        // reset the array
+        s_funders = new address[](10);
+        (bool callSuccess, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(callSuccess, "Call failed");
+    }
+
 
 
     function withdraw() public onlyOwner {
-        for(uint256 funderIndex = 0; funderIndex < funders.length; funderIndex++){
-            address funder = funders[funderIndex];
-            addressToAmountFunded[funder] = 0;
+        for(uint256 funderIndex = 0; funderIndex < s_funders.length; funderIndex++){
+            address funder = s_funders[funderIndex];
+            s_addressToAmountFunded[funder] = 0;
         }
         // reset the array
-        funders = new address[](10);
+        s_funders = new address[](10);
 
         // 3 ways of transfering
 
@@ -72,7 +84,7 @@ contract FundMe {
     }
 
 
-    // What happens if someone sends this contract ETH withouyt calling the func functioin
+    // What happens if someone sends this contract ETH without calling the fund function
     
     receive() external payable {
         fund();
@@ -82,6 +94,18 @@ contract FundMe {
         fund();
     }
 
+    // View/Pure functions (Getters)
+    function getAddressToAmountFunded(address fundingAddress) external view returns (uint256) {
+        return s_addressToAmountFunded[fundingAddress];
+    }
+
+    function getFunder(uint256 index) external view returns (address) {
+        return s_funders[index];
+    }
+
+    function getOwner() external view returns (address) {
+        return i_owner;
+    }
 
 
 
